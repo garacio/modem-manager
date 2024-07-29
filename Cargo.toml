@@ -1,0 +1,10 @@
+[package]
+name = "modem-manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+atat = "0.23.0"
+regex = "1.10.5"
+serialport = "4.4.0"
+log = "0.4.22"
