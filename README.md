@@ -1,6 +1,7 @@
 # Modem Manager
 
 Modem Manager is an educational project developed to get acquainted with the Rust programming language. It focuses on parsing AT command responses from a modem.
+Many thanks for https://github.com/prusa-dev/fibocom-connect-l8x0 for inspiration
 
 ## Features
 
