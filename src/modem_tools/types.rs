@@ -1,6 +1,22 @@
 use std::fmt;
+use regex::Regex;
 use crate::modem_tools::converters::get_band_lte;
 use crate::display_tools::bars::get_bar;
+
+pub struct AtRegexps {
+    pub cgmi_regex: Regex,
+    pub fmm_regex: Regex,
+    pub gtpkgver_regex: Regex,
+    pub cfsn_regex: Regex,
+    pub cgsn_regex: Regex,
+    pub cimi_regex: Regex,
+    pub csq_regex: Regex,
+    pub ccid_regex: Regex,
+    pub cops_regex: Regex,
+    pub xmci4_regex: Regex,
+    pub xmci45_regex: Regex,
+    pub xlec_regex: Regex,
+}
 
 #[derive(Default)]
 pub struct ModemInfo {
@@ -9,58 +25,13 @@ pub struct ModemInfo {
     pub fw_version: String,
     pub serial_number: String,
     pub imei: String,
-}
-
-impl ModemInfo {
-    pub fn print(&self) {
-        println!("===Modem info:\n\
-        Manufacturer:        {}\n\
-        Model:               {}\n\
-        Firmware Version:    {}\n\
-        Serial Number:       {}\n\
-        IMEI:                {}",
-        &self.manufacturer,
-        &self.model,
-        &self.fw_version,
-        &self.serial_number,
-        &self.imei);
-        println!()
-    }
-}
-
-#[derive(Default)]
-pub struct SimInfo {
     pub imsi: String,
     pub iccid: String,
     pub operator: String,
     pub mode: String,
     pub ip: String,
     pub mask: String,
-    pub gw: String
-}
-
-impl SimInfo {
-    pub fn print(&self) {
-        println!("===SIM info:\n\
-        IMSI:                {}\n\
-        ICCID:               {}\n\
-        Operator:            {} ({})\n\
-        IP:                  {}\n\
-        Mask:                {}\n\
-        GW:                  {}",
-        &self.imsi,
-        &self.iccid,
-        &self.operator,
-        &self.mode,
-        &self.ip,
-        &self.mask,
-        &self.gw);
-        println!()
-    }
-}
-
-#[derive(Default)]
-pub struct SignalInfo {
+    pub gw: String,
     pub band: String,
     pub bw: String,
     pub csq: i32,
@@ -77,9 +48,46 @@ pub struct SignalInfo {
     pub sinr_x: Vec<i32>,
 }
 
-impl SignalInfo {
+impl ModemInfo {
+    pub fn display_modem_info(&self) {
+        println!("=== Modem info ===\n\
+        Manufacturer:        {}\n\
+        Model:               {}\n\
+        Firmware Version:    {}\n\
+        Serial Number:       {}\n\
+        IMEI:                {}\n",
+        &self.manufacturer,
+        &self.model,
+        &self.fw_version,
+        &self.serial_number,
+        &self.imei);
+    }
+
+    pub fn display_signal_info(&self) {
+        println!("=== Status ===\n\
+            Operator:             {} ({})\n\
+            Distance:             {}\n\
+            Signal:               {:2}%    [{}]\n\
+            RSSI:                 {:2}dBm  [{}]\n\
+            SINR:                 {:2}dB  [{}]\n\
+            RSRP:                 {:2}    [{}]\n\
+            RSRQ:                 {:2}    [{}]\n\
+            Band:                 {}\n\
+            EARFCN:               {}\n\
+            ",
+            self.operator, self.mode,
+            "",
+            self.csq_perc, get_bar(self.csq_perc, 0, 100),
+            self.rssi, get_bar(self.rssi, -110, -25),
+            self.sinr, get_bar(self.sinr, -10, 30),
+            self.rsrp, get_bar(self.rsrp, -120, -50),
+            self.rsrq, get_bar(self.rsrq, -25, -1),
+            self.band,
+            ""
+            );
+    }
     pub fn display_carrier_info(&self) {
-        for (index, &carrier_id) in self.ci_x.iter().enumerate(){
+        for (index, &_) in self.ci_x.iter().enumerate(){
             let band = get_band_lte(self.earfcn_x[index]);
             let rsrp_str = format!("{}dBm", self.rsrp_x[index]);
             let rsrq_str = format!("{}dB", self.rsrq_x[index]);
@@ -97,7 +105,7 @@ impl SignalInfo {
     }
 }
 
-impl fmt::Debug for SignalInfo {
+impl fmt::Debug for ModemInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SignalInfo")
             .field("band", &self.band)

@@ -1,8 +1,5 @@
-use std::time::Duration;
-use std::io::{self, Read, Write};
-use std::thread;
-use regex::Regex;
-use serialport::{available_ports, SerialPortInfo, SerialPortType, SerialPort};
+use std::io;
+use serialport::{available_ports, SerialPortInfo, SerialPortType};
 
 fn list_ports() -> Result<Vec<SerialPortInfo>, serialport::Error> {
     match available_ports() {
@@ -42,6 +39,9 @@ pub fn get_port() -> Result<String, io::Error> {
     let ports = list_ports()?;
 
     loop {
+        if ports.len() == 0 {
+            return Ok("".to_string())
+        }
         println!("Please select a port (1-{}):", ports.len());
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("Failed to read line");

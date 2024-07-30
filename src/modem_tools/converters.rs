@@ -13,24 +13,24 @@ pub fn parse_bandwidth(bandwidth: &str) -> String {
         .join(", ")
 }
 
-pub fn calculate_frequency(earfcn: i32, band: &str) -> (f64, f64) {
-    match band {
-        "1" => (2110.0 + 0.1 * (earfcn - 0) as f64, 1920.0 + 0.1 * (earfcn - 18000) as f64),
-        "2" => (1930.0 + 0.1 * (earfcn - 600) as f64, 1850.0 + 0.1 * (earfcn - 18600) as f64),
-        "3" => (1805.0 + 0.1 * (earfcn - 1200) as f64, 1710.0 + 0.1 * (earfcn - 19200) as f64),
-        "4" => (2110.0 + 0.1 * (earfcn - 1950) as f64, 1710.0 + 0.1 * (earfcn - 19950) as f64),
-        "5" => (869.0 + 0.1 * (earfcn - 2400) as f64, 824.0 + 0.1 * (earfcn - 20400) as f64),
-        "7" => (2620.0 + 0.1 * (earfcn - 2750) as f64, 2500.0 + 0.1 * (earfcn - 20750) as f64),
-        "8" => (925.0 + 0.1 * (earfcn - 3450) as f64, 880.0 + 0.1 * (earfcn - 21450) as f64),
-        "12" => (729.0 + 0.1 * (earfcn - 5010) as f64, 699.0 + 0.1 * (earfcn - 23010) as f64),
-        "13" => (746.0 + 0.1 * (earfcn - 5180) as f64, 777.0 + 0.1 * (earfcn - 23180) as f64),
-        "20" => (791.0 + 0.1 * (earfcn - 6150) as f64, 832.0 + 0.1 * (earfcn - 24150) as f64),
-        "25" => (1930.0 + 0.1 * (earfcn - 2400) as f64, 1850.0 + 0.1 * (earfcn - 20400) as f64),
-        "28" => (758.0 + 0.1 * (earfcn - 9210) as f64, 703.0 + 0.1 * (earfcn - 27210) as f64),
-        "40" => (2300.0 + 0.1 * (earfcn - 3450) as f64, 2300.0 + 0.1 * (earfcn - 21450) as f64),
-        _ => (0.0, 0.0),
-    }
-}
+// pub fn calculate_frequency(earfcn: i32, band: &str) -> (f64, f64) {
+//     match band {
+//         "1" => (2110.0 + 0.1 * (earfcn - 0) as f64, 1920.0 + 0.1 * (earfcn - 18000) as f64),
+//         "2" => (1930.0 + 0.1 * (earfcn - 600) as f64, 1850.0 + 0.1 * (earfcn - 18600) as f64),
+//         "3" => (1805.0 + 0.1 * (earfcn - 1200) as f64, 1710.0 + 0.1 * (earfcn - 19200) as f64),
+//         "4" => (2110.0 + 0.1 * (earfcn - 1950) as f64, 1710.0 + 0.1 * (earfcn - 19950) as f64),
+//         "5" => (869.0 + 0.1 * (earfcn - 2400) as f64, 824.0 + 0.1 * (earfcn - 20400) as f64),
+//         "7" => (2620.0 + 0.1 * (earfcn - 2750) as f64, 2500.0 + 0.1 * (earfcn - 20750) as f64),
+//         "8" => (925.0 + 0.1 * (earfcn - 3450) as f64, 880.0 + 0.1 * (earfcn - 21450) as f64),
+//         "12" => (729.0 + 0.1 * (earfcn - 5010) as f64, 699.0 + 0.1 * (earfcn - 23010) as f64),
+//         "13" => (746.0 + 0.1 * (earfcn - 5180) as f64, 777.0 + 0.1 * (earfcn - 23180) as f64),
+//         "20" => (791.0 + 0.1 * (earfcn - 6150) as f64, 832.0 + 0.1 * (earfcn - 24150) as f64),
+//         "25" => (1930.0 + 0.1 * (earfcn - 2400) as f64, 1850.0 + 0.1 * (earfcn - 20400) as f64),
+//         "28" => (758.0 + 0.1 * (earfcn - 9210) as f64, 703.0 + 0.1 * (earfcn - 27210) as f64),
+//         "40" => (2300.0 + 0.1 * (earfcn - 3450) as f64, 2300.0 + 0.1 * (earfcn - 21450) as f64),
+//         _ => (0.0, 0.0),
+//     }
+// }
 
 // fn convert_rsrp_to_rssi(rsrp: i32, bw: &str) -> Vec<i32> {
 //     bw.split(',')
@@ -114,14 +114,14 @@ pub fn hex_to_decimal(hex: &str) -> Result<i32, std::num::ParseIntError> {
     i32::from_str_radix(hex.trim_start_matches("0x"), 16)
 }
 
-pub fn parse_bandwidth_str(bw_str: &str) -> Option<i32> {
-    match bw_str {
-        "1" => Some(0),
-        "3" => Some(1),
-        "5" => Some(2),
-        "10" => Some(3),
-        "15" => Some(4),
-        "20" => Some(5),
-        _ => None,
-    }
-}
+// pub fn parse_bandwidth_str(bw_str: &str) -> Option<i32> {
+//     match bw_str {
+//         "1" => Some(0),
+//         "3" => Some(1),
+//         "5" => Some(2),
+//         "10" => Some(3),
+//         "15" => Some(4),
+//         "20" => Some(5),
+//         _ => None,
+//     }
+// }

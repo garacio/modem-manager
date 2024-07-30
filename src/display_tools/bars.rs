@@ -5,7 +5,7 @@ pub fn get_bar(value: i32, min: i32, max: i32) -> String {
     } else if value > max {
         100
     } else {
-        ((value - min) * 100 / (max - min))
+        (value - min) * 100 / (max - min)
     };
 
     // Определяем количество баров на основе нормализованного сигнала
