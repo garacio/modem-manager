@@ -190,6 +190,8 @@ pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::err
         signal_info.rsrp = caps.name("rsrp").unwrap().as_str().parse::<i32>().unwrap_or(0) - 141;
         signal_info.rsrq = caps.name("rsrq").unwrap().as_str().parse::<i32>().unwrap_or(0) / 2 - 20;
         signal_info.sinr = caps.name("sinr").unwrap().as_str().parse::<i32>().unwrap_or(0) / 2;
+        signal_info.distance = (hex_to_decimal(caps.name("timing_advance").unwrap().as_str()).unwrap_or(0) as f64 * 78.125).round();
+        signal_info.dluarfnc = hex_to_decimal(caps.name("dluarfnc_x").unwrap().as_str()).unwrap_or(0)
 
     }
 

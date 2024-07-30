@@ -34,6 +34,8 @@ pub struct ModemInfo {
     pub gw: String,
     pub band: String,
     pub bw: String,
+    pub distance: f64,
+    pub dluarfnc: i32,
     pub csq: i32,
     pub csq_perc: i32,
     pub rssi: i32,
@@ -66,24 +68,24 @@ impl ModemInfo {
     pub fn display_signal_info(&self) {
         println!("=== Status ===\n\
             Operator:             {} ({})\n\
-            Distance:             {}\n\
+            Distance:             {}m\n\
             Signal:               {:2}%    [{}]\n\
             RSSI:                 {:2}dBm  [{}]\n\
             SINR:                 {:2}dB  [{}]\n\
             RSRP:                 {:2}    [{}]\n\
             RSRQ:                 {:2}    [{}]\n\
             Band:                 {}\n\
-            EARFCN:               {}\n\
+                EARFCN:               {}\n\
             ",
             self.operator, self.mode,
-            "",
+            self.distance,
             self.csq_perc, get_bar(self.csq_perc, 0, 100),
             self.rssi, get_bar(self.rssi, -110, -25),
             self.sinr, get_bar(self.sinr, -10, 30),
             self.rsrp, get_bar(self.rsrp, -120, -50),
             self.rsrq, get_bar(self.rsrq, -25, -1),
             self.band,
-            ""
+            self.dluarfnc
             );
     }
     pub fn display_carrier_info(&self) {
