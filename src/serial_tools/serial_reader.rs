@@ -11,9 +11,9 @@ fn list_ports() -> Result<Vec<SerialPortInfo>, serialport::Error> {
                     SerialPortType::UsbPort(info) => {
                         println!("  Type: USB");
                         println!("  VID: {:04x}, PID: {:04x}", info.vid, info.pid);
-                        println!("  Manufacturer: {:?}", info.manufacturer);
-                        println!("  Product: {:?}", info.product);
-                        println!("  Serial Number: {:?}", info.serial_number);
+                        println!("  Manufacturer: {}", info.manufacturer.as_ref().map_or("", String::as_str));
+                        println!("  Product: {}", info.product.as_ref().map_or("", String::as_str));
+                        println!("  Serial Number: {}", info.serial_number.as_ref().map_or("", String::as_str));
                     }
                     SerialPortType::BluetoothPort => {
                         println!("  Type: Bluetooth");
