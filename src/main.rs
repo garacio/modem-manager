@@ -26,6 +26,7 @@ fn main() {
 
                 let modem_info = get_modem_info(modem_info_string).unwrap();
 
+
                 print!("\x1B[2J\x1B[1;1H");
                 modem_info.display_modem_info();
                 modem_info.display_signal_info();

@@ -12,6 +12,7 @@ pub struct AtRegexps {
     pub cimi_regex: Regex,
     pub csq_regex: Regex,
     pub ccid_regex: Regex,
+    pub cgcontrdp_regex: Regex,
     pub cops_regex: Regex,
     pub xmci4_regex: Regex,
     pub xmci45_regex: Regex,
@@ -32,6 +33,8 @@ pub struct ModemInfo {
     pub ip: String,
     pub mask: String,
     pub gw: String,
+    pub dns_prim: String,
+    pub dns_sec: String,
     pub band: String,
     pub bw: String,
     pub distance: f64,
@@ -68,7 +71,9 @@ impl ModemInfo {
     pub fn display_signal_info(&self) {
         println!("=== Status ===\n\
             Operator:             {} ({})\n\
-            Distance:             {}m\n\
+            IP/Mask:              {} / {}\n\
+            DNS:                  {} {}\n\
+            Distance:             {}m\n\n\
             Signal:               {:2}%    [{}]\n\
             RSSI:                 {:2}dBm  [{}]\n\
             SINR:                 {:2}dB  [{}]\n\
@@ -78,6 +83,8 @@ impl ModemInfo {
                 EARFCN:               {}\n\
             ",
             self.operator, self.mode,
+            self.ip, self.mask,
+            self.dns_prim, self.dns_sec,
             self.distance,
             self.csq_perc, get_bar(self.csq_perc, 0, 100),
             self.rssi, get_bar(self.rssi, -110, -25),

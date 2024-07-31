@@ -19,13 +19,19 @@ mod tests {
     +CIMI: 220033400995562\r\n\r\nOK\r\n\
     +CCID: 89381030000328789401\r\n\r\nOK\r\n\
     +COPS: 0,0,\"mt:s\",7\r\n\r\nOK\r\n\
+    +CGCONTRDP: 1,6,\"3gnet.mnc003.mcc220.gprs\",\"10.179.248.170.255.0.0.0\",\"10.179.248.171\",\"172.22.23.175\",\"172.21.8.175\",\"\",\"\",0\r\n\r\n\
+    +CGCONTRDP: 1,6,\"3gnet.mnc003.mcc220.gprs\",\"10.179.248.170.255.0.0.0\",\"10.179.248.171\",\"172.22.23.175\",\"172.22.23.175\",\"\",\"\",0\r\n\r\n\
+    +CGCONTRDP: 1,6,\"3gnet.mnc003.mcc220.gprs\",\"10.179.248.170.255.0.0.0\",\"10.179.248.171\",\"172.22.23.175\",\"172.21.8.175\",\"\",\"\",0\r\n\r\n\
+    OK\r\n\
     AT+CSQ?\r\r\n+CSQ: 11,2\r\n\r\nOK\r\n\
     AT+XCCINFO?; +XLEC?; +XMCI=1\r\r\n\
     +XCCINFO: 0,220,03,\"00009C03\",3,103,\"FFFF\",1,\"FF\",\"4E91\",0,0,0,0,0,0,0,0\r\n\r\n\
     +XLEC: 0,2,5,3,BAND_LTE_3\r\n\r\n\
     +XMCI: 4,220,03,\"0x4E91\",\"0x00009C03\",\"0x0062\",\"0x000005DC\",\"0x00004C2C\",\"0xFFFFFFFF\",49,17,-4,\"0x00000003\",\"0x00000000\"\r\n\r\n\
     +XMCI: 5,000,000,\"0xFFFE\",\"0xFFFFFFFF\",\"0x0061\",\"0x000005DC\",\"0xFFFFFFFF\",\"0xFFFFFFFF\",42,2,255,\"0x7FFFFFFF\",\"0x00000000\"\r\n\r\n\
-    +XMCI: 5,000,000,\"0xFFFE\",\"0xFFFFFFFF\",\"0x006A\",\"0x000005DC\",\"0xFFFFFFFF\",\"0xFFFFFFFF\",43,8,255,\"0x7FFFFFFF\",\"0x00000000\"\r\n\r\nOK\r\n";
+    +XMCI: 5,000,000,\"0xFFFE\",\"0xFFFFFFFF\",\"0x006A\",\"0x000005DC\",\"0xFFFFFFFF\",\"0xFFFFFFFF\",43,8,255,\"0x7FFFFFFF\",\"0x00000000\"\r\n\r\n\
+    OK\r\n";
+
 
 
     #[test]
@@ -85,6 +91,23 @@ mod tests {
         assert_eq!(caps.get(3).unwrap().as_str(), "mt:s");
         assert_eq!(caps.get(4).unwrap().as_str(), "7");
     }
+
+    #[test]
+fn test_cgcontrdp_regex() {
+    let re_cgcontrdp = &REGEXPS.cgcontrdp_regex;
+    let caps = re_cgcontrdp.captures(TEST_STRING).unwrap();
+    assert_eq!(caps.name("index").unwrap().as_str(), "1");
+    assert_eq!(caps.name("cid").unwrap().as_str(), "6");
+    assert_eq!(caps.name("apn").unwrap().as_str(), "3gnet.mnc003.mcc220.gprs");
+    assert_eq!(caps.name("ip_addr").unwrap().as_str(), "10.179.248.170");
+    assert_eq!(caps.name("mask").unwrap().as_str(), "255.0.0.0");
+    assert_eq!(caps.name("dns_prim").unwrap().as_str(), "10.179.248.171");
+    assert_eq!(caps.name("dns_sec").unwrap().as_str(), "172.22.23.175");
+    assert_eq!(caps.name("gw_addr").unwrap().as_str(), "172.21.8.175");
+    assert_eq!(caps.name("p_cscf_prim").unwrap().as_str(), "");
+    assert_eq!(caps.name("p_cscf_sec").unwrap().as_str(), "");
+    assert_eq!(caps.name("mtu").unwrap().as_str(), "0");
+}
 
     #[test]
     fn test_csq_regex() {

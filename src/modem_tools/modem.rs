@@ -44,6 +44,7 @@ pub static REGEXPS: Lazy<AtRegexps> = Lazy::new(|| AtRegexps {
     cimi_regex: Regex::new(r#"\+CIMI: (\d+)"#).unwrap(),
     csq_regex: Regex::new(r#"\+CSQ: (\d+),(\d+)"#).unwrap(),
     ccid_regex: Regex::new(r#"\+CCID: (\d+)"#).unwrap(),
+    cgcontrdp_regex: Regex::new(r#"\+CGCONTRDP: (?P<index>\d),(?P<cid>\d+),"(?P<apn>[^"]+)","(?P<ip_addr>\d+\.\d+\.\d+\.\d+)\.(?P<mask>\d+\.\d+\.\d+\.\d+)","(?P<dns_prim>[^"]+)","(?P<dns_sec>[^"]+)","(?P<gw_addr>[^"]+)","(?P<p_cscf_prim>[^"]*)","(?P<p_cscf_sec>[^"]*)",(?P<mtu>\d+)"#).unwrap(),
     cops_regex: Regex::new(r#"\+COPS: (\d),(\d),"([^"]*)",(\d)"#).unwrap(),
     xmci4_regex: Regex::new(r#"\+XMCI: (?P<type>4),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>-?\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#).unwrap(),
     xmci45_regex: Regex::new(r#"\+XMCI: (?P<type>[45]),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>-?\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#).unwrap(),
@@ -94,6 +95,7 @@ pub fn get_modem_info_string(port_name: &str, baud_rate: u32) -> Result<String, 
     signal_info_string.push_str(send_at_command(&mut *port, "AT+CIMI?")?.as_str());
     signal_info_string.push_str(send_at_command(&mut *port, "AT+CCID?")?.as_str());
     signal_info_string.push_str(send_at_command(&mut *port, "AT+COPS?")?.as_str());
+    signal_info_string.push_str(send_at_command(&mut *port, "AT+CGCONTRDP=1")?.as_str());
     signal_info_string.push_str(send_at_command(&mut *port, "AT+CSQ?")?.as_str());
     signal_info_string.push_str(send_at_command(&mut *port, "AT+XCCINFO?; +XLEC?; +XMCI=1")?.as_str());
     Ok(signal_info_string)
@@ -138,9 +140,14 @@ pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::err
         signal_info.imei = imei.parse().unwrap();
     }
 
-    signal_info.ip = "---".parse().unwrap();
-    signal_info.mask = "---".parse().unwrap();
-    signal_info.gw = "---".parse().unwrap();
+    let re_cgcontrdp = &REGEXPS.cgcontrdp_regex;
+    if let Some(caps) = re_cgcontrdp.captures(&info_string) {
+        signal_info.ip = caps.name("ip_addr").unwrap().as_str().parse().unwrap();
+        signal_info.mask = caps.name("mask").unwrap().as_str().parse().unwrap();
+        signal_info.gw = caps.name("gw_addr").unwrap().as_str().parse().unwrap();
+        signal_info.dns_prim = caps.name("dns_prim").unwrap().as_str().parse().unwrap();
+        signal_info.dns_sec = caps.name("dns_sec").unwrap().as_str().parse().unwrap();
+    }
 
     // IMSI
     let re_cimi = &REGEXPS.cimi_regex;
