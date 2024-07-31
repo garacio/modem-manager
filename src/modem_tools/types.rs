@@ -54,9 +54,8 @@ pub struct ModemInfo {
 }
 
 impl ModemInfo {
-    pub fn display_modem_info(&self) {
-        println!("=== Modem info ===\n\
-        Manufacturer:        {}\n\
+    pub fn display_modem_info(&self) -> String{
+        format!("Manufacturer:        {}\n\
         Model:               {}\n\
         Firmware Version:    {}\n\
         Serial Number:       {}\n\
@@ -65,12 +64,11 @@ impl ModemInfo {
         &self.model,
         &self.fw_version,
         &self.serial_number,
-        &self.imei);
+        &self.imei)
     }
 
-    pub fn display_signal_info(&self) {
-        println!("=== Status ===\n\
-            Operator:             {} ({})\n\
+    pub fn display_signal_info(&self) -> String {
+        format!("Operator:             {} ({})\n\
             IP/Mask:              {} / {}\n\
             DNS:                  {} {}\n\
             Distance:             {}m\n\n\
@@ -93,9 +91,10 @@ impl ModemInfo {
             self.rsrq, get_bar(self.rsrq, -25, -1),
             self.band,
             self.dluarfnc
-            );
+            )
     }
-    pub fn display_carrier_info(&self) {
+    pub fn display_carrier_info(&self) -> String {
+        let mut carrier_info: String = "".to_string();
         for (index, &_) in self.ci_x.iter().enumerate(){
             let band = get_band_lte(self.earfcn_x[index]);
             let rsrp_str = format!("{}dBm", self.rsrp_x[index]);
@@ -106,11 +105,12 @@ impl ModemInfo {
             let rsrq_bar = get_bar(self.rsrq_x[index], -25, -1);
             let sinr_bar = get_bar(self.sinr_x[index], -10, 30);
 
-            println!(
-                "===Carrier {:2}: CI: {:8} PCI: {:4} Band (EARFCN): {:3} ({:5}) RSRP: {:>5} [{}] RSRQ: {:>5} [{}] SINR: {:2} [{}]",
+            carrier_info.push_str(format!(
+                "===Carrier {:2}: CI: {:8} PCI: {:4} Band (EARFCN): {:3} ({:5}) RSRP: {:>5} [{}] RSRQ: {:>5} [{}] SINR: {:2} [{}]\n",
                 index, self.ci_x[index], self.pci_x[index], band, self.earfcn_x[index], rsrp_str, rsrp_bar, rsrq_str, rsrq_bar, sinr_str, sinr_bar
-            );
+            ).as_str());
         }
+        carrier_info
     }
 }
 
