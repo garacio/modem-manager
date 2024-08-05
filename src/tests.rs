@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
     use crate::modem_tools::modem::REGEXPS;
 
     // static TEST_STRING: &str = "AT+CSQ?\r\r\n+CSQ: 11,2\r\n\r\nOK\r\n\
@@ -30,7 +31,8 @@ mod tests {
     +XMCI: 4,220,03,\"0x4E91\",\"0x00009C03\",\"0x0062\",\"0x000005DC\",\"0x00004C2C\",\"0xFFFFFFFF\",49,17,-4,\"0x00000003\",\"0x00000000\"\r\n\r\n\
     +XMCI: 5,000,000,\"0xFFFE\",\"0xFFFFFFFF\",\"0x0061\",\"0x000005DC\",\"0xFFFFFFFF\",\"0xFFFFFFFF\",42,2,255,\"0x7FFFFFFF\",\"0x00000000\"\r\n\r\n\
     +XMCI: 5,000,000,\"0xFFFE\",\"0xFFFFFFFF\",\"0x006A\",\"0x000005DC\",\"0xFFFFFFFF\",\"0xFFFFFFFF\",43,8,255,\"0x7FFFFFFF\",\"0x00000000\"\r\n\r\n\
-    OK\r\n";
+    OK\r\n\r\n\
+    +XACT: 4,2,1,1,2,4,5,8,101,102,103,104,105,107,108,112,113,117,118,119,120,126,128,129,130,141,166\r\n";
 
 
 
@@ -145,5 +147,159 @@ fn test_cgcontrdp_regex() {
         assert_eq!(caps.name("sinr").unwrap().as_str(), "-4");
         assert_eq!(caps.name("timing_advance").unwrap().as_str(), "0x00000003");
         assert_eq!(caps.name("cqi").unwrap().as_str(), "0x00000000");
+    }
+
+    #[test]
+    fn test_xact(){
+        let re_bands = &REGEXPS.bands_regex;
+        let caps = re_bands.captures(TEST_STRING).unwrap();
+        let umts_flag = caps.name("umts_flag").map_or("", |m| m.as_str());
+        let lte_flag = caps.name("lte_flag").map_or("", |m| m.as_str());
+        let umts_bands_str = caps.name("umts_bands").map_or("", |m| m.as_str());
+        let lte_bands_str = caps.name("lte_bands").map_or("", |m| m.as_str());
+
+        // Определение режима
+        let is_umts_enabled = umts_flag == "4";
+        let is_lte_enabled = lte_flag == "2";
+
+        // Извлечение и вывод UMTS бэндов
+        let umts_bands: Vec<&str> = umts_bands_str.split(',').filter(|s| !s.is_empty()).collect();
+
+        // Извлечение и преобразование LTE бэндов
+        let lte_bands: Vec<String> = lte_bands_str
+            .split(',')
+            .filter_map(|s| s.parse::<i32>().ok())
+            .map(|n| (n - 100).to_string())
+            .collect();
+
+        assert!(is_umts_enabled, "UMTS должен быть включен");
+        assert!(is_lte_enabled, "LTE должен быть включен");
+        assert_eq!(umts_bands, vec!["1", "2", "4", "5", "8"]);
+        assert_eq!(lte_bands, vec!["1", "2", "3", "4", "5", "7", "8", "12", "13", "17", "18", "19", "20", "26", "28", "29", "30", "41", "66"]);
+
+        //
+        // let modes = caps.name("modes").map_or("", |m| m.as_str());
+        // let umts_bands_str = caps.name("umts_bands").map_or("", |m| m.as_str());
+        // let lte_bands_str = caps.name("lte_bands").map_or("", |m| m.as_str());
+        //
+        // // Определение режима
+        // let is_lte_enabled = modes.contains('2');
+        // let is_umts_enabled = modes.contains('4');
+        //
+        // // Извлечение и вывод UMTS бэндов
+        // let umts_bands: Vec<&str> = umts_bands_str.split(',').filter(|s| !s.is_empty()).collect();
+        //
+        // // Извлечение и преобразование LTE бэндов
+        // let lte_bands: Vec<String> = lte_bands_str
+        //     .split(',')
+        //     .filter_map(|s| s.parse::<i32>().ok())
+        //     .map(|n| (n - 100).to_string())
+        //     .collect();
+        //
+        // assert_eq!(modes.to_string(), "4");
+        // assert_eq!(umts_bands_str.to_string(), "");
+        // assert_eq!(lte_bands_str.to_string(), "");
+        // // assert!(is_umts_enabled, "UMTS должен быть включен");
+        // // assert!(is_lte_enabled, "LTE должен быть включен");
+        // assert!(umts_bands.is_empty(), "UMTS бэнды должны быть пустыми");
+        // assert_eq!(lte_bands, vec!["1", "3", "20"]);
+    }
+    #[test]
+    fn test_lte_only() {
+        let xact_string = "+XACT: 2,2,,101,103,120";
+        let re_bands = &REGEXPS.bands_regex;
+
+        if let Some(caps) = re_bands.captures(xact_string) {
+            let modes = caps.name("modes").map_or("", |m| m.as_str());
+            let umts_bands_str = caps.name("umts_bands").map_or("", |m| m.as_str());
+            let lte_bands_str = caps.name("lte_bands").map_or("", |m| m.as_str());
+
+            // Определение режима
+            let is_lte_enabled = modes.contains('2');
+            let is_umts_enabled = modes.contains('4');
+
+            // Извлечение и вывод UMTS бэндов
+            let umts_bands: Vec<&str> = umts_bands_str.split(',').filter(|s| !s.is_empty()).collect();
+
+            // Извлечение и преобразование LTE бэндов
+            let lte_bands: Vec<String> = lte_bands_str
+                .split(',')
+                .filter_map(|s| s.parse::<i32>().ok())
+                .map(|n| (n - 100).to_string())
+                .collect();
+
+            assert!(!is_umts_enabled, "UMTS должен быть выключен");
+            assert!(is_lte_enabled, "LTE должен быть включен");
+            assert!(umts_bands.is_empty(), "UMTS бэнды должны быть пустыми");
+            assert_eq!(lte_bands, vec!["1", "3", "20"]);
+        } else {
+            panic!("Строка не соответствует ожидаемому формату");
+        }
+    }
+
+    #[test]
+    fn test_both_modes_limited_bands() {
+        let xact_string = "+XACT: 4,2,1,1,2,4,5,8,101,103,120";
+        let re_bands = &REGEXPS.bands_regex;
+
+        if let Some(caps) = re_bands.captures(xact_string) {
+            let modes = caps.name("modes").map_or("", |m| m.as_str());
+            let umts_bands_str = caps.name("umts_bands").map_or("", |m| m.as_str());
+            let lte_bands_str = caps.name("lte_bands").map_or("", |m| m.as_str());
+
+            // Определение режима
+            let is_lte_enabled = modes.contains('2');
+            let is_umts_enabled = modes.contains('1');
+
+            // Извлечение и вывод UMTS бэндов
+            let umts_bands: Vec<&str> = umts_bands_str.split(',').filter(|s| !s.is_empty()).collect();
+
+            // Извлечение и преобразование LTE бэндов
+            let lte_bands: Vec<String> = lte_bands_str
+                .split(',')
+                .filter_map(|s| s.parse::<i32>().ok())
+                .map(|n| (n - 100).to_string())
+                .collect();
+
+            assert!(is_umts_enabled, "UMTS должен быть включен");
+            assert!(is_lte_enabled, "LTE должен быть включен");
+            assert_eq!(umts_bands, vec!["1", "1", "2", "4", "5", "8"]);
+            assert_eq!(lte_bands, vec!["1", "3", "20"]);
+        } else {
+            panic!("Строка не соответствует ожидаемому формату");
+        }
+    }
+
+    #[test]
+    fn test_umts_only() {
+        let xact_string = "+XACT: 1,1,1,2,5";
+        let re_bands = &REGEXPS.bands_regex;
+
+        if let Some(caps) = re_bands.captures(xact_string) {
+            let modes = caps.name("modes").map_or("", |m| m.as_str());
+            let umts_bands_str = caps.name("umts_bands").map_or("", |m| m.as_str());
+            let lte_bands_str = caps.name("lte_bands").map_or("", |m| m.as_str());
+
+            // Определение режима
+            let is_lte_enabled = modes.contains('2');
+            let is_umts_enabled = modes.contains('1');
+
+            // Извлечение и вывод UMTS бэндов
+            let umts_bands: Vec<&str> = umts_bands_str.split(',').filter(|s| !s.is_empty()).collect();
+
+            // Извлечение и преобразование LTE бэндов
+            let lte_bands: Vec<String> = lte_bands_str
+                .split(',')
+                .filter_map(|s| s.parse::<i32>().ok())
+                .map(|n| (n - 100).to_string())
+                .collect();
+
+            assert!(is_umts_enabled, "UMTS должен быть включен");
+            assert!(!is_lte_enabled, "LTE должен быть выключен");
+            assert_eq!(umts_bands, vec!["1", "2", "5"]);
+            assert!(lte_bands.is_empty(), "LTE бэнды должны быть пустыми");
+        } else {
+            panic!("Строка не соответствует ожидаемому формату");
+        }
     }
 }

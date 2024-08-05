@@ -7,34 +7,6 @@ use serialport::SerialPort;
 use crate::modem_tools::converters::{get_band_lte, hex_to_decimal, parse_bandwidth, convert_rsrp_to_rssi};
 use crate::modem_tools::types::{ModemInfo, AtRegexps};
 
-// AT+XCCINFO?; +XLEC?; +XMCI=1
-// +XCCINFO: 0,220,03,"00009C03",3,103,"FFFF",1,"FF","4E91",0,0,0,0,0,0,0,0
-//
-// +XLEC: 0,2,5,3,BAND_LTE_3
-//
-// +XMCI: 4,220,03,"0x4E91","0x00009C03","0x0062","0x000005DC","0x00004C2C","0xFFFFFFFF",50,14,0,"0x00000004","0x00000000"
-//
-// +XMCI: 5,000,000,"0xFFFE","0xFFFFFFFF","0x006A","0x000005DC","0xFFFFFFFF","0xFFFFFFFF",47,6,255,"0x7FFFFFFF","0x00000000"
-//
-// +XMCI: 5,000,000,"0xFFFE","0xFFFFFFFF","0x0061","0x000005DC","0xFFFFFFFF","0xFFFFFFFF",45,8,255,"0x7FFFFFFF","0x00000000"
-//
-// OK
-
-// pub static REGEXPS: AtRegexps = AtRegexps{
-//     cgmi_regex: r#"\+CGMI: "([^"]+)""#.to_string(),
-//     fmm_regex: r#"\+FMM: "([^"]+)"(?:,"([^"]+)")?"#.to_string(),
-//     gtpkgver_regex: r#"\+GTPKGVER: "([^"]+)""#.to_string(),
-//     cfsn_regex: r#"\+CFSN: "([^"]+)""#.to_string(),
-//     cgsn_regex: r#"\+CGSN: "([^"]+)""#.to_string(),
-//     cimi_regex: r#"\+CIMI: "([^"]+)""#.to_string(),
-//     csq_regex: r#"\+CSQ: (\d+),(\d+)"#.to_string(),
-//     ccid_regex: r#"\+CCID: "([^"]+)""#.to_string(),
-//     cops_regex: r#"\+COPS: (\d),(\d),"([^"]*)",(\d)"#.to_string(),
-//     xmci4_regex: r#"\+XMCI: (?P<type>4),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#.to_string(),
-//     xmci45_regex: r#"\+XMCI: (?P<type>[45]),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>-?\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#.to_string(),
-//     xlec_regex: r#"\+XLEC: (?:\d+),(?P<no_of_cells>\d+),(?P<bw>(?:\d+,?)+),BAND_LTE_(?P<band>(?:\d+,?)+)"#.to_string(),
-// };
-
 pub static REGEXPS: Lazy<AtRegexps> = Lazy::new(|| AtRegexps {
     cgmi_regex: Regex::new(r#"\+CGMI: "([^"]+)""#).unwrap(),
     fmm_regex: Regex::new(r#"\+FMM: "([^"]+)"(?:,"([^"]+)")?"#).unwrap(),
@@ -49,6 +21,7 @@ pub static REGEXPS: Lazy<AtRegexps> = Lazy::new(|| AtRegexps {
     xmci4_regex: Regex::new(r#"\+XMCI: (?P<type>4),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>-?\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#).unwrap(),
     xmci45_regex: Regex::new(r#"\+XMCI: (?P<type>[45]),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>-?\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#).unwrap(),
     xlec_regex: Regex::new(r#"\+XLEC: (?:\d+),(?P<no_of_cells>\d+),(?P<bw>(?:\d+,?)+),BAND_LTE_(?P<band>(?:\d+,?)+)"#).unwrap(),
+    bands_regex: Regex::new(r#"\+XACT: (?P<umts_flag>\d+),(?P<lte_flag>\d+),\d+,(?P<umts_bands>(?:\d+,)*\d+),(?P<lte_bands>(?:1\d{2},)*1\d{2})\r?"#).unwrap(),
 });
 
 fn send_at_command(port: &mut dyn SerialPort, command: &str) -> Result<String, io::Error> {
@@ -57,7 +30,7 @@ fn send_at_command(port: &mut dyn SerialPort, command: &str) -> Result<String, i
     port.flush()?;
     let mut response = String::new();
     let mut serial_buf: Vec<u8> = vec![0; 200];
-    let timeout = std::time::Duration::from_millis(300);
+    let timeout = std::time::Duration::from_millis(100);
     let start = std::time::Instant::now();
 
     loop {
@@ -68,7 +41,7 @@ fn send_at_command(port: &mut dyn SerialPort, command: &str) -> Result<String, i
                     break;
                 }
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+            Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {
                 if start.elapsed() > timeout {
                     break;
                 }
@@ -80,9 +53,17 @@ fn send_at_command(port: &mut dyn SerialPort, command: &str) -> Result<String, i
     Ok(response)
 }
 
+pub fn modem_execute(port_name: &String, baud_rate: u32, command: &str) -> Result<String, io::Error>{
+    let mut port = serialport::new(port_name, baud_rate)
+        .timeout(Duration::from_secs(1))
+        .open()?;
+    port.write_data_terminal_ready(true)?; // Включение DTR
+    send_at_command(&mut *port, command)
+}
+
 pub fn get_modem_info_string(port_name: &str, baud_rate: u32) -> Result<String, std::io::Error> {
     let mut port = serialport::new(port_name, baud_rate)
-        .timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(1))
         .open()?;
     port.write_data_terminal_ready(true)?; // Включение DTR
 

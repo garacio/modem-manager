@@ -1,4 +1,3 @@
-use std::fmt;
 use regex::Regex;
 use crate::modem_tools::converters::get_band_lte;
 use crate::display_tools::bars::get_bar;
@@ -17,9 +16,10 @@ pub struct AtRegexps {
     pub xmci4_regex: Regex,
     pub xmci45_regex: Regex,
     pub xlec_regex: Regex,
+    pub bands_regex: Regex,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ModemInfo {
     pub manufacturer: String,
     pub model: String,
@@ -36,7 +36,7 @@ pub struct ModemInfo {
     pub dns_prim: String,
     pub dns_sec: String,
     pub band: String,
-    pub bw: String,
+    // pub bw: String,
     pub distance: f64,
     pub dluarfnc: i32,
     pub csq: i32,
@@ -72,11 +72,11 @@ impl ModemInfo {
             IP/Mask:              {} / {}\n\
             DNS:                  {} {}\n\
             Distance:             {}m\n\n\
-            Signal:               {:2}%    [{}]\n\
-            RSSI:                 {:2}dBm  [{}]\n\
-            SINR:                 {:2}dB  [{}]\n\
-            RSRP:                 {:2}    [{}]\n\
-            RSRQ:                 {:2}    [{}]\n\
+            Signal:               {:>2}%     [{}]\n\
+            RSSI:                 {:>2}dBm  [{}]\n\
+            SINR:                 {:>2}dB    [{}]\n\
+            RSRP:                 {:>2}dBm  [{}]\n\
+            RSRQ:                 {:>2}db   [{}]\n\
             Band:                 {}\n\
                 EARFCN:               {}\n\
             ",
@@ -114,18 +114,18 @@ impl ModemInfo {
     }
 }
 
-impl fmt::Debug for ModemInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SignalInfo")
-            .field("band", &self.band)
-            .field("bw", &self.bw)
-            .field("csq", &self.csq)
-            .field("csq_perc", &self.csq_perc)
-            .field("ci", &self.ci_x)
-            .field("pci", &self.pci_x)
-            .field("earfcn", &self.earfcn_x)
-            .field("rsrp", &self.rsrp_x)
-            .field("rsrq", &self.rsrq_x)
-            .finish()
-    }
-}
+// impl fmt::Debug for ModemInfo {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         f.debug_struct("SignalInfo")
+//             .field("band", &self.band)
+//             .field("bw", &self.bw)
+//             .field("csq", &self.csq)
+//             .field("csq_perc", &self.csq_perc)
+//             .field("ci", &self.ci_x)
+//             .field("pci", &self.pci_x)
+//             .field("earfcn", &self.earfcn_x)
+//             .field("rsrp", &self.rsrp_x)
+//             .field("rsrq", &self.rsrq_x)
+//             .finish()
+//     }
+// }
