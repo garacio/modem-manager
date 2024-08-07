@@ -1,9 +1,7 @@
-use color_eyre::owo_colors::OwoColorize;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint, Direction, Layout, Offset, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::prelude::{Color, Style};
-use ratatui::text::{Span, Text};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Widget, Wrap};
+use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 use crate::display_tools::tui::app_tabs::AppTabs;
 
 impl AppTabs {
@@ -29,6 +27,7 @@ AT+GTUSBMODE=7 - Switch to MBIM mode
 AT+GTUSBMODE=9 - Switch to NCM+ACM(2EP) mode - for Kinetics
 AT+CFUN=15 - Restart modem
 AT+XACT? - View enabled bands
+AT+XACT=4,2,,0 - UMTS+LTE all bands, LTE preferred
 AT+XACT=2,,,107,103 - Enable only band 7 and 3
 AT+XACT=2,,,107 - Enable only band 7
 AT+XACT=2,,,0 - Unlock all LTE bands

@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serialport::SerialPort;
 use crate::modem_tools::converters::{get_band_lte, hex_to_decimal, parse_bandwidth, convert_rsrp_to_rssi};
-use crate::modem_tools::types::{ModemInfo, AtRegexps};
+use crate::modem_tools::types::{ModemInfo, AtRegexps, BandModes};
 
 pub static REGEXPS: Lazy<AtRegexps> = Lazy::new(|| AtRegexps {
     cgmi_regex: Regex::new(r#"\+CGMI: "([^"]+)""#).unwrap(),
@@ -21,7 +21,7 @@ pub static REGEXPS: Lazy<AtRegexps> = Lazy::new(|| AtRegexps {
     xmci4_regex: Regex::new(r#"\+XMCI: (?P<type>4),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>-?\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#).unwrap(),
     xmci45_regex: Regex::new(r#"\+XMCI: (?P<type>[45]),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<tac>[^"]*)","(?P<ci_x>[^"]*)","(?P<pci_x>[^"]*)","(?P<dluarfnc_x>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<pathloss_lte>[^"]*)",(?P<rsrp>\d+),(?P<rsrq>\d+),(?P<sinr>-?\d+),"(?P<timing_advance>[^"]*)","(?P<cqi>[^"]*)""#).unwrap(),
     xlec_regex: Regex::new(r#"\+XLEC: (?:\d+),(?P<no_of_cells>\d+),(?P<bw>(?:\d+,?)+),BAND_LTE_(?P<band>(?:\d+,?)+)"#).unwrap(),
-    bands_regex: Regex::new(r#"\+XACT: (?P<umts_flag>\d+),(?P<lte_flag>\d+),\d+,(?P<umts_bands>(?:\d+,)*\d+),(?P<lte_bands>(?:1\d{2},)*1\d{2})\r?"#).unwrap(),
+    xact_regex: Regex::new(r#"\+XACT: (?P<umts_flag>4?),?(?P<lte_flag>2?),?\d+,(?P<umts_bands>(?:\d{1,2},)*\d{1,2})?,,?(?P<lte_bands>(?:1\d{2},)*1\d{2})?\r?"#).unwrap(),
 });
 
 fn send_at_command(port: &mut dyn SerialPort, command: &str) -> Result<String, io::Error> {
@@ -53,12 +53,58 @@ fn send_at_command(port: &mut dyn SerialPort, command: &str) -> Result<String, i
     Ok(response)
 }
 
-pub fn modem_execute(port_name: &String, baud_rate: u32, command: &str) -> Result<String, io::Error>{
-    let mut port = serialport::new(port_name, baud_rate)
+pub fn modem_execute(port_name: &String, baud_rate: &u32, command: &str) -> Result<String, io::Error>{
+    let mut port = serialport::new(port_name, *baud_rate)
         .timeout(Duration::from_secs(1))
         .open()?;
     port.write_data_terminal_ready(true)?; // Включение DTR
     send_at_command(&mut *port, command)
+}
+
+pub fn save_bands_command(config_umts_bands: Vec<usize>, config_lte_bands: Vec<usize>) -> String {
+
+    let umts_flag = if !config_umts_bands.is_empty() { "4" } else { "" };
+    let lte_flag = if !config_lte_bands.is_empty() { "2" } else { "" };
+
+    let umts_bands = if !config_umts_bands.is_empty() {
+        config_umts_bands.iter()
+            .map(|&band| band.to_string())
+            .collect::<Vec<String>>()
+            .join(",")
+    } else {
+        String::from("")
+    };
+
+    let lte_bands = if !config_lte_bands.is_empty() {
+        config_lte_bands.iter()
+            .map(|&band| (band + 100).to_string())
+            .collect::<Vec<String>>()
+            .join(",")
+    } else {
+        String::from("")
+    };
+
+    // Формирование команды
+    match (umts_flag.is_empty(), lte_flag.is_empty()) {
+        (false, false) => format!(
+            "AT+XACT={},{},,{},{}",
+            umts_flag,
+            lte_flag,
+            umts_bands,
+            lte_bands
+        ),
+        (false, true) => format!(
+            "AT+XACT={},,,{}",
+            umts_flag,
+            umts_bands
+        ),
+        (true, false) => format!(
+            "AT+XACT={},,,{}",
+            lte_flag,
+            lte_bands
+        ),
+        (true, true) => "AT+XACT=0,0,,0".to_string()
+    }
 }
 
 pub fn get_modem_info_string(port_name: &str, baud_rate: u32) -> Result<String, std::io::Error> {
@@ -79,6 +125,7 @@ pub fn get_modem_info_string(port_name: &str, baud_rate: u32) -> Result<String, 
     signal_info_string.push_str(send_at_command(&mut *port, "AT+CGCONTRDP=1")?.as_str());
     signal_info_string.push_str(send_at_command(&mut *port, "AT+CSQ?")?.as_str());
     signal_info_string.push_str(send_at_command(&mut *port, "AT+XCCINFO?; +XLEC?; +XMCI=1")?.as_str());
+    signal_info_string.push_str(send_at_command(&mut *port, "AT+XACT?")?.as_str());
     Ok(signal_info_string)
 }
 
@@ -96,7 +143,7 @@ pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::err
     // Modem model
     let re_fmm = &REGEXPS.fmm_regex;
     if let Some(caps) = re_fmm.captures(&info_string) {
-        let model = caps.get(1).unwrap().as_str();
+        let model = caps.get(2).unwrap().as_str();
         signal_info.model = model.parse().unwrap();
     }
 
@@ -183,8 +230,6 @@ pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::err
 
     }
 
-
-    // let re_xmci = Regex::new(r#"\+XMCI: (?P<carrier_id>[45]),(?P<mcc>\d+),(?P<mnc>\d+),"(?P<ci>[^"]*)","(?P<e_ci>[^"]*)","(?P<pci>[^"]*)","(?P<earfcn_dl>[^"]*)","(?P<earfcn_ul>[^"]*)","(?P<band>[^"]*)",(?P<rssi>\d+),(?P<rsrp>\d+),(?P<rsrq>\d+),"(?P<sinr>[^"]*)","(?P<timing_advance>[^"]*)""#).unwrap();
     let re_xmci = &REGEXPS.xmci45_regex;
     let mut dluarfnc = Vec::new();
 
@@ -200,7 +245,6 @@ pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::err
         dluarfnc.push(dluarfnc_x);
     }
 
-    // +XLEC: 0,2,5,3,BAND_LTE_3
     let re_xlec = &REGEXPS.xlec_regex;
 
     let mut band ;
@@ -240,6 +284,34 @@ pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::err
         let bw_value = parse_bandwidth(&bw_str);
         let band_str = get_band_lte(*dluarfnc_x);
         signal_info.band = format!("{}@{}MHz", band_str, bw_value);
+    }
+
+    let re_xact = &REGEXPS.xact_regex;
+
+    if let Some(caps) = re_xact.captures(&info_string) {
+        let utm_mands = caps.name("umts_bands");
+        if utm_mands.is_none() {
+            signal_info.enabled_umts_bands = Vec::new();
+        } else {
+            signal_info.enabled_umts_bands = caps.name("umts_bands").unwrap().as_str().split(',').filter_map(|s| {
+                             let trimmed = s.trim();
+                             if !trimmed.is_empty() {
+                                 trimmed.parse::<usize>().ok()
+                             } else {
+                                 None
+                             }
+                         })
+                         .collect();
+        }
+        signal_info.enabled_lte_bands = caps.name("lte_bands").unwrap().as_str().split(',').filter_map(|s| s.parse::<i32>().ok()).map(|b| (b - 100) as usize).collect();
+        signal_info.config_band_modes = ["umts_flag", "lte_flag"]
+            .iter()
+            .filter_map(|&flag| match (flag, caps.name(flag).unwrap().as_str()) {
+                ("umts_flag", "4") => Some(BandModes::UMTS),
+                ("lte_flag", "2") => Some(BandModes::LTE),
+                _ => None,
+            })
+            .collect();
     }
 
     Ok(signal_info)

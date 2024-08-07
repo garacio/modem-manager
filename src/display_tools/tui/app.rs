@@ -1,7 +1,6 @@
 use std::io::{Stdout, stdout};
 use std::sync::{mpsc};
 use std::{io, thread};
-use std::cmp::PartialEq;
 use std::process::exit;
 use std::time::{Duration, Instant};
 use crossterm::event::poll;
@@ -9,7 +8,6 @@ use ratatui::{
     backend::{CrosstermBackend},
     buffer::Buffer,
     crossterm::{
-        event::{self, Event, KeyCode, KeyEventKind},
         execute,
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
@@ -20,21 +18,20 @@ use ratatui::{
     widgets::{Widget},
     Frame
 };
-use ratatui::text::Span;
-use ratatui::widgets::{Tabs};
-use crate::modem_tools::modem::{get_modem_info, get_modem_info_string, modem_execute};
+use ratatui::widgets::Tabs;
+use crate::modem_tools::modem::{get_modem_info, get_modem_info_string};
 use crate::display_tools::tui::port_choice_menu::show_port_choice_menu;
-use crate::display_tools::tui::app_tabs::{AppTabs, SelectedTab};
+use crate::display_tools::tui::app_tabs::{AppTabs, BandsSelectorActive, SelectedTab};
 use strum::IntoEnumIterator;
-use crate::display_tools::tui::app_tabs::SelectedTab::TerminalTab;
 use crate::display_tools::tui::errors;
+use crate::modem_tools::supported_modems::Modem;
 
 #[derive(Default, Clone)]
 pub struct App {
-    app_tabs: AppTabs,
-    port_name: String,
-    baud_rate: u32,
-    exit: bool
+    pub(crate) app_tabs: AppTabs,
+    pub(crate) port_name: String,
+    pub(crate) baud_rate: u32,
+    pub(crate) exit: bool
 }
 
 pub type Tui = Terminal<CrosstermBackend<Stdout>>;
@@ -48,17 +45,27 @@ impl App {
             self.exit = true
         }
 
-        let modem_info = self.app_tabs.modem_info.clone();
+        let port_name = self.port_name.clone();
+        let baud_rate = self.baud_rate.clone();
+
+        self.app_tabs.active_bands_selector = BandsSelectorActive::UMTSBandsSelector;
+        self.app_tabs.umts_bands_list_state.select(Some(0));
+        self.app_tabs.lte_bands_list_state.select(None);
 
         let (_tx, rx) = mpsc::channel::<()>();
 
-        // Установите интервал опроса
         let poll_interval = Duration::from_secs(3);
         let mut last_poll_time = Instant::now();
 
-        // self.update_modem_info();
-        let baud_rate = self.baud_rate.clone();
-        let port_name = self.port_name.clone();
+        self.update_modem_info();
+        let modem_info = self.app_tabs.modem_info.clone();
+
+        {
+            let mi = modem_info.lock().unwrap();
+            self.app_tabs.modem_capabilities.spec = Some(Modem::new(mi.model.as_str()).unwrap());
+            self.app_tabs.config_umts_bands = mi.enabled_umts_bands.clone();
+            self.app_tabs.config_lte_bands = mi.enabled_lte_bands.clone();
+        }
         let _update_handle = thread::spawn(move || {
             loop {
                 if rx.try_recv().is_ok() {
@@ -68,16 +75,18 @@ impl App {
                 if last_poll_time.elapsed() >= poll_interval {
                     let modem_info_string = get_modem_info_string(port_name.as_str(), baud_rate).unwrap_or_else(|err| {
                         eprintln!("{}", err);
-                        exit(1);
+                        String::new()
                     });
 
+                    if modem_info_string.is_empty() {
+                        thread::sleep(Duration::from_secs(5));
+                        break
+                    }
                     let updated_info = get_modem_info(modem_info_string).unwrap();
-
                     {
                         let mut info = modem_info.lock().unwrap();
                         *info = updated_info;
                     }
-
                     last_poll_time = Instant::now();
                 }
 
@@ -94,8 +103,22 @@ impl App {
         Ok(())
     }
 
+    fn update_modem_info(&self) {
+        let modem_info_string = get_modem_info_string(self.port_name.as_str(), self.baud_rate).unwrap_or_else(|err| {
+                        eprintln!("{}", err);
+                        exit(1);
+                    });
+
+        let updated_info = get_modem_info(modem_info_string).unwrap();
+
+        {
+            let modem_info = self.app_tabs.modem_info.clone();
+            let mut info = modem_info.lock().unwrap();
+            *info = updated_info;
+        }
+    }
+
     fn render_frame(&self, frame: &mut Frame) {
-        // frame.set_cursor(self.app_tabs.cursor_position.x, self.app_tabs.cursor_position.y);
         frame.render_widget(self, frame.size())
     }
 
@@ -103,21 +126,21 @@ impl App {
         self.exit = true
     }
 
-    fn next_tab(&mut self) {
+    pub(crate) fn next_tab(&mut self) {
         self.app_tabs.selected_tab = self.app_tabs.next();
     }
 
-    fn previous_tab(&mut self) {
-        self.app_tabs.selected_tab = self.app_tabs.previous();
+    pub(crate) fn _previous_tab(&mut self) {
+        self.app_tabs.selected_tab = self.app_tabs._previous();
     }
 
-    fn move_cursor_left(&mut self) {
+    pub(crate) fn move_cursor_left(&mut self) {
         let cursor_moved_left = self.app_tabs.cursor_index.saturating_sub(1);
         self.app_tabs.cursor_index = self.clamp_cursor(cursor_moved_left);
         self.app_tabs.cursor_position.x = self.app_tabs.cursor_index as u16 + 1;
     }
 
-    fn move_cursor_right(&mut self) {
+    pub(crate) fn move_cursor_right(&mut self) {
         let cursor_moved_right = self.app_tabs.cursor_index.saturating_add(1);
         self.app_tabs.cursor_index = self.clamp_cursor(cursor_moved_right);
         self.app_tabs.cursor_position.x = self.app_tabs.cursor_index as u16 + 1;
@@ -131,13 +154,13 @@ impl App {
             .unwrap_or(self.app_tabs.terminal_data.input.len())
     }
 
-    fn enter_char(&mut self, new_char: char) {
+    pub(crate) fn enter_char(&mut self, new_char: char) {
         let index = self.byte_index();
         self.app_tabs.terminal_data.input.insert(index, new_char);
         self.move_cursor_right();
     }
 
-    fn delete_char(&mut self) {
+    pub(crate) fn delete_char(&mut self) {
         let is_not_cursor_leftmost = self.app_tabs.cursor_index != 0;
         if is_not_cursor_leftmost {
             // Method "remove" is not used on the saved text for deleting the selected char.
@@ -167,86 +190,7 @@ impl App {
     //     self.app_tabs.cursor_index = 0;
     // }
 
-    fn handle_events(&mut self) -> std::io::Result<()> {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Tab => self.next_tab(),
-                    KeyCode::Left => {
-                        match self.app_tabs.editing_mode {
-                            true => self.move_cursor_left(),
-                            false => self.previous_tab()
-                        }
-                    },
-                    KeyCode::Right => {
-                        match self.app_tabs.editing_mode {
-                            true => self.move_cursor_right(),
-                            false => self.next_tab()
-                        }
-                    },
-                    KeyCode::Esc => {
-                        match self.app_tabs.selected_tab {
-                            TerminalTab => {
-                                match self.app_tabs.editing_mode {
-                                    true => self.app_tabs.editing_mode = false,
-                                    false => self.exit()
-                                }
-                            },
-                            _ => self.exit()
-                        }
-                    },
-                    KeyCode::Down => self.app_tabs.band_list_state.lock().unwrap().select_next(),
-                    KeyCode::Up => self.app_tabs.band_list_state.lock().unwrap().select_previous(),
-                    KeyCode::Backspace => {
-                        match self.app_tabs.editing_mode {
-                            true => self.delete_char(),
-                            false => {}
-                        }
-                    },
-                    KeyCode::Char(ch) => {
-                        match self.app_tabs.selected_tab {
-                            TerminalTab => {
-                                match self.app_tabs.editing_mode {
-                                    true => self.enter_char(ch),
-                                    false => {
-                                        match ch  {
-                                            'i' | 'ш' => self.app_tabs.editing_mode = true,
-                                            'q' | 'й' => self.exit = true,
-                                            _ => {}
-                                        }
-                                    }
-                                }
-                            },
-                            _ => {}
-                        }
-                    },
-                    KeyCode::Enter => {
-                        match self.app_tabs.editing_mode {
-                            true => {
-                                let command = self.app_tabs.terminal_data.input.trim();
-                                if command.len() > 0 {
-                                    let response = modem_execute(
-                                        &self.port_name,
-                                        self.baud_rate.clone(),
-                                        command
-                                    ).unwrap_or_else(|err| {
-                                        eprintln!("Error executing modem command: {}", err);
-                                        "".to_string()
-                                        });
-                                    self.app_tabs.terminal_data.input = "".to_string();
-                                    self.app_tabs.terminal_data.output.push_str(response.trim());
-                                    self.app_tabs.terminal_data.output.push_str("\r\n----------\r\n");
-                                }
-                            },
-                            false => {}
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-        Ok(())
-    }
+
 }
 
 impl Widget for &App {
@@ -273,7 +217,7 @@ impl Widget for &App {
 
 
         "Fibocom L8[5,6]0-GL".bold().render(title_area, buf);
-        Line::raw("◄ ► or Tab to change tab | Press q or Esc to quit")
+        Line::raw("◄ ► or Tab to change tab| F10 to save | q or Esc to quit without saving")
         .centered()
         .render(footer_area, buf);
     }

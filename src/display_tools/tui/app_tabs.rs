@@ -4,8 +4,9 @@ use ratatui::layout::Rect;
 use ratatui::style::palette::tailwind;
 use ratatui::style::Stylize;
 use ratatui::widgets::{ListState, Widget};
-use ratatui::text::{Line, Span};
+use ratatui::text::Line;
 use strum::{Display, EnumCount, EnumIter, FromRepr};
+use crate::modem_tools::supported_modems::Modem;
 use crate::modem_tools::types::ModemInfo;
 
 #[derive(Default, Clone, Copy, Display, FromRepr, EnumIter, EnumCount)]
@@ -40,7 +41,7 @@ impl SelectedTab {
 #[derive(Default, Clone)]
 pub struct CursorPosition {
     pub x: u16,
-    pub y: u16
+    pub _y: u16
 }
 
 #[derive(Default, Clone)]
@@ -49,20 +50,33 @@ pub struct TerminalData {
     pub output: String
 }
 
+#[derive(Default, Clone, Copy)]
+pub enum BandsSelectorActive {
+    #[default]
+    UMTSBandsSelector,
+    LTEBandsSelector,
+}
+
 #[derive(Default, Clone)]
 pub struct AppTabs {
     pub selected_tab: SelectedTab,
     pub modem_info: Arc<Mutex<ModemInfo>>,
-    pub band_list_state: Arc<Mutex<ListState>>,
+    pub active_bands_selector: BandsSelectorActive,
+    pub umts_bands_list_state: ListState,
+    pub lte_bands_list_state: ListState,
     pub editing_mode: bool,
     pub cursor_index: usize,
     pub cursor_position: CursorPosition,
     pub terminal_data: TerminalData,
+    pub config_lte_bands: Vec<usize>,
+    pub config_umts_bands: Vec<usize>,
+    pub save_bands_command: String,
+    pub(crate) modem_capabilities: Modem,
 }
 impl AppTabs {
 
     /// Get the previous tab, if there is no previous tab return the current tab.
-    pub(crate) fn previous(&mut self) -> SelectedTab {
+    pub(crate) fn _previous(&mut self) -> SelectedTab {
         let current_index: usize = self.selected_tab as usize;
         let previous_index = match current_index {
             0 => SelectedTab::COUNT.saturating_sub(1),
