@@ -119,7 +119,7 @@ impl App {
     }
 
     fn render_frame(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.size())
+        frame.render_widget(self, frame.area())
     }
 
     pub fn exit(&mut self) {

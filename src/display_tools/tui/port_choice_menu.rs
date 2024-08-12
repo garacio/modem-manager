@@ -21,7 +21,7 @@ pub fn show_port_choice_menu(terminal: &mut Terminal<CrosstermBackend<Stdout>>) 
 
     loop {
         terminal.draw(|f| {
-            let size = f.size();
+            let size = f.area();
 
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
