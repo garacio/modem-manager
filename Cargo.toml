@@ -8,8 +8,11 @@ regex = "1.10.5"
 serialport = "4.4.0"
 log = "0.4.22"
 once_cell = "1.19.0"
-crossterm = "0.28.1"
+crossterm = { version = "0.28.1", features = ["event-stream"] }
 ratatui = "0.28.0"
 strum = "0.26.3"
 strum_macros = "0.26.4"
 color-eyre = "0.6.3"
+tokio = { version = "1.39.2", features = ["full"] }
+anyhow = "1.0.86"
+tokio-stream = "0.1.15"

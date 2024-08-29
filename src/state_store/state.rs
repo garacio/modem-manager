@@ -1,8 +1,8 @@
 use regex::Regex;
 use crate::modem_tools::converters::get_band_lte;
-use crate::display_tools::bars::get_bar;
+use crate::ui_management::bars::get_bar;
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub enum BandModes {
     #[default]
     LTE,
@@ -26,7 +26,7 @@ pub struct AtRegexps {
     pub xact_regex: Regex,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct ModemInfo {
     pub manufacturer: String,
     pub model: String,
@@ -121,4 +121,23 @@ impl ModemInfo {
         }
         carrier_info
     }
+}
+
+#[derive(Default, Clone)]
+pub struct State {
+    pub(crate) modem_connection_status: ModemConnectionStatus,
+    pub(crate) modem_info: ModemInfo,
+    pub(crate) port_name: String,
+    pub(crate) baud_rate: u32,
+    pub(crate) terminal_user_output: String,
+    pub(crate) _exit: bool
+}
+
+#[derive(Clone, Default)]
+pub enum ModemConnectionStatus {
+    #[default]
+    Uninitialized,
+    Connecting,
+    Connected,
+    Errored{ err: String }
 }

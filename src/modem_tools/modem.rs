@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serialport::SerialPort;
 use crate::modem_tools::converters::{get_band_lte, hex_to_decimal, parse_bandwidth, convert_rsrp_to_rssi};
-use crate::modem_tools::types::{ModemInfo, AtRegexps, BandModes};
+use crate::state_store::state::{ModemInfo, AtRegexps, BandModes};
 
 pub static REGEXPS: Lazy<AtRegexps> = Lazy::new(|| AtRegexps {
     cgmi_regex: Regex::new(r#"\+CGMI: "([^"]+)""#).unwrap(),
@@ -129,7 +129,7 @@ pub fn get_modem_info_string(port_name: &str, baud_rate: u32) -> Result<String, 
     Ok(signal_info_string)
 }
 
-pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::error::Error>> {
+pub async fn get_modem_info(info_string: String) -> anyhow::Result<ModemInfo> {
 
     let mut signal_info: ModemInfo = Default::default();
 
@@ -316,3 +316,4 @@ pub fn get_modem_info(info_string: String) -> Result<ModemInfo, Box<dyn std::err
 
     Ok(signal_info)
 }
+

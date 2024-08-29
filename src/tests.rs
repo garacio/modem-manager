@@ -2,14 +2,19 @@
 mod tests {
     use crate::modem_tools::modem::REGEXPS;
 
-    // static TEST_STRING: &str = "AT+CSQ?\r\r\n+CSQ: 11,2\r\n\r\nOK\r\n\
-    // AT+XCCINFO?; +XLEC?; +XMCI=1\r\r\n\
-    // +XCCINFO: 0,220,03,\"00009C03\",3,103,\"FFFF\",1,\"FF\",\"4E91\",0,0,0,0,0,0,0,0\r\n\r\n\
-    // +XLEC: 0,2,5,3,BAND_LTE_3\r\n\r\n\
-    // +XMCI: 4,220,03,\"0x4E91\",\"0x00009C03\",\"0x0062\",\"0x000005DC\",\"0x00004C2C\",\"0xFFFFFFFF\",49,17,-4,\"0x00000003\",\"0x00000000\"\r\n\r\n\
-    // +XMCI: 5,000,000,\"0xFFFE\",\"0xFFFFFFFF\",\"0x0061\",\"0x000005DC\",\"0xFFFFFFFF\",\"0xFFFFFFFF\",42,2,255,\"0x7FFFFFFF\",\"0x00000000\"\r\n\r\n\
-    // +XMCI: 5,000,000,\"0xFFFE\",\"0xFFFFFFFF\",\"0x006A\",\"0x000005DC\",\"0xFFFFFFFF\",\"0xFFFFFFFF\",43,8,255,\"0x7FFFFFFF\",\"0x00000000\"\r\n\r\n\
-    // OK\r\n";
+    // TODO: Not working UMTS signal quality
+    // +XLEC: 0,1,5,BAND_UMTS_I
+    //
+    // AT+CSQ?
+    // +CSQ: 22,1
+    //
+    // AT+XCCINFO?; +XLEC?; +XMCI=1
+    // +XCCINFO: 0,220,03,"000176F0",2,1,"4E87",0,"02","FFFF",0,2,0,0,0,0,0,0
+    // +XLEC: 0,1,5,BAND_UMTS_I
+    // +XMCI: 2,220,03,"0x4E87","0x000176F0","0x012F","0x0000298E","0x000025D8","-1",28,45,43
+    // +XMCI: 3,000,000,"0xFFFE","0xFFFFFFFF","0x0127","0x0000298E","0x000025D8","-1",27,32,18
+    // +XMCI: 3,000,000,"0xFFFE","0xFFFFFFFF","0x003C","0x0000298E","0x000025D8","-1",27,29,13
+
 
     static TEST_STRING: &str = "+CGMI: \"Fibocom\"\r\n\r\nOK\r\n\
     +FMM: \"L850 LTE Module\",\"L850\"\r\n\

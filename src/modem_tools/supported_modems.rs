@@ -1,4 +1,4 @@
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct ModemSpecs {
     pub _manufacturer: &'static str,
     pub _model: &'static str,
@@ -13,16 +13,16 @@ pub static FIBOCOM_L850GL: ModemSpecs = ModemSpecs {
     supported_lte_bands: &[1,2,3,4,5,7,8,12,13,17,18,19,20,26,28,29,30,41,66]
 };
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Modem {
-    pub(crate) spec: Option<&'static ModemSpecs>,
+    pub(crate) _spec: Option<&'static ModemSpecs>,
 }
 
 impl Modem {
-    pub fn new(model: &str) -> Result<&'static ModemSpecs, &'static str> {
+    pub fn new(model: &str) -> anyhow::Result<ModemSpecs> {
         match model {
-            "L850" => Ok(&FIBOCOM_L850GL),
-            _ => Err("Modem is not supported")
+            "L850" => Ok(FIBOCOM_L850GL.clone()),
+            _ => {Ok(Default::default()) }
         }
     }
 }
