@@ -1,0 +1,16 @@
+pipeline:
+  build:
+    steps:
+      - name: build
+        image: rust:latest
+        commands:
+          - cargo build --release
+          - cargo test
+
+  artifacts:
+    steps:
+      - name: upload-artifacts
+        image: plugins/artifact
+        settings:
+          files:
+            - target/release/modem-manager
