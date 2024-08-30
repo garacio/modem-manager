@@ -1,16 +1,14 @@
-pipeline:
-  build:
-    steps:
-      - name: build
-        image: rust:latest
-        commands:
-          - cargo build --release
-          - cargo test
+matrix:
+  RUST: [stable, beta, nightly]
 
-  artifacts:
-    steps:
-      - name: upload-artifacts
-        image: plugins/artifact
-        settings:
-          files:
-            - target/release/modem-manager
+steps:
+  test:
+    when:
+      event: [push, pull_request]
+    image: rust
+    environment: [CARGO_TERM_COLOR=always]
+    commands:
+      - rustup default $RUST
+      - cargo check
+      - cargo test
+      - cargo build --releas
